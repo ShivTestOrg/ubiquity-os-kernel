@@ -12,9 +12,11 @@ import { bindHandlers } from "./github/handlers/index";
 import { Env, envSchema } from "./github/types/env";
 import { EmptyStore } from "./github/utils/kv-store";
 import { logger } from "./logger/logger";
+import { McpProxyClient } from "./bridge/bridge";
 
 export const app = new Hono();
 
+const proxyServer = new McpProxyClient();
 app.use(requestId());
 app.use(async (c: Context, next) => {
   const requestId = c.var.requestId;
@@ -72,7 +74,9 @@ app.post("/", async (ctx: Context) => {
   }
 });
 
-function handleUncaughtError(ctx: Context, error: unknown) {
+app.route("/mcp", proxyServer.exportRoutes());
+
+export function handleUncaughtError(ctx: Context, error: unknown) {
   ctx.var.logger.error(error, "Uncaught error");
   let status = 500;
   let errorMessage = "An uncaught error occurred";
